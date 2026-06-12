@@ -7,6 +7,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Struct stores log information
 type CustomLog struct {
 	MessageID string
 	LogReason string
@@ -15,13 +16,15 @@ type CustomLog struct {
 	Line int
 }
 
+
+// Converts struct to string
 func (a *CustomLog) LogToString() string {
 	return fmt.Sprintf("MessageID: %s, LogReason: %s, Function: %s, File: %s, Line: %d",
 	a.MessageID, a.LogReason, a.Function, a.File, a.Line)
 }
 
 func NewCustomLog(messageID string, logDesc string, logType ...string) *CustomLog {
-	pc, file, line, ok := runtime.Caller(1)
+	pc, file, line, ok := runtime.Caller(1) // It look at who call the function NewcustomLog
 	function := "unknown"
 	if ok {
 		fn := runtime.FuncForPC(pc)
@@ -67,7 +70,7 @@ func NewCustomLog(messageID string, logDesc string, logType ...string) *CustomLo
 			Str("File", msg.File).
 			Int("Line", msg.Line).
 			Msg(msg.LogReason)
-	case len(logType) > 0 && logType[0] == "fatal":
+	case len(logType) > 0 && logType[0] == "debug":
 		log.Debug().Str("MessageID", msg.MessageID).
 			Str("LogReason", "logged : `"+msg.Function+"()`").
 			Str("Function", msg.Function).

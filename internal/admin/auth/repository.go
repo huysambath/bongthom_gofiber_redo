@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"database/sql"
+	"errors"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -23,10 +25,13 @@ func (r *AuthRepoImpl) Login(username string, password string) (bool, error) {
 	var user Auth
 	query := `SELECT id, user_name, password FROM tbl_users WHERE user_name = $1 AND password = $2 AND deleted_at IS NULL LIMIT 1`
 
-    err := r.db.Get(&user, query, username, password)
-    if err != nil {
-        return false, nil
-    }
+	err := r.db.Get(&user, query, username, password)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
 
 	return true, nil
 }

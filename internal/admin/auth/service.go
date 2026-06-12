@@ -1,6 +1,11 @@
 package auth
 
-import "github.com/jmoiron/sqlx"
+import (
+	error_response "admin-api/pkg/responses"
+	"errors"
+
+	"github.com/jmoiron/sqlx"
+)
 
 type AuthService interface {
 	Login(username string,password string) (*AuthLoginResponse, error)
@@ -18,16 +23,25 @@ func NewAuthServiceImpl(db *sqlx.DB) *AuthServiceImpl{
 }
 
 func (s *AuthServiceImpl) Login(username string,password string) (*AuthLoginResponse, error) {
-   rs, _ := s.Repo.Login(username,password)
+	rs, err := s.Repo.Login(username,password)
+	if err != nil {
+		return nil, &error_response.ErrorResponse{
+			MessageID: "database_error",
+			Err:       err,
+		}
+	}
 
-   if !rs {
-		return nil, nil
-   }
+	if !rs {
+		return nil, &error_response.ErrorResponse{
+			MessageID: "login_failed",
+			Err:       errors.New("invalid username or password"),
+		}
+	}
 
-   var au AuthLoginResponse
-   au.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30"
-   au.TokenType = "jwt"
+	var au AuthLoginResponse
+	au.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30"
+	au.TokenType = "jwt"
 
-   return &au, nil
+	return &au, nil
    
 }

@@ -1,18 +1,21 @@
 package auth
 
 import (
-	"admin-api/pkg/utls"
-
+	// Community packages
 	"github.com/gofiber/fiber/v3"
-	"github.com/jmoiron/sqlx"
+
+	// Internal packages
+	constants "admin-api/pkg/constants"
+	response "admin-api/pkg/http"
+	"admin-api/pkg/translate"
+	"admin-api/pkg/utls"
 )
 
 type AuthHandler struct {
 	Service AuthService
 }
 
-func NewAuthHandler(db *sqlx.DB) *AuthHandler{
-	s := NewAuthServiceImpl(db)
+func NewAuthHandler(s AuthService) *AuthHandler{
 	return &AuthHandler{
 		Service: s,
 	}
@@ -26,30 +29,41 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 		return err
 	}
 
-	result, err := h.Service.Login(req.Username,req.Password)
+	rs, err := h.Service.Login(req.Username,req.Password)
 
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": "failed",
-			"message": "error",
-			"status": 2000,
-			"data": "JWT not generated",
-		})
-	}
-
-	if result == nil {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"success": "fail",
-			"message": "success",
-			"status": 3001,
-			"data": result,
-		})
-	}else{
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"success": "true",
-			"message": "success",
-			"status": 3000,
-			"data": result,
-		})
+		msg, e_msg := translate.TranslateWithError(c, "login_invalid")
+		if e_msg != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(
+				response.NewResponseError(
+					e_msg.Err.Error(),
+					constants.Translate_Failed,
+					err,
+				),
+			)
+		}
+		return c.Status(fiber.StatusBadRequest).JSON(
+			response.NewResponseError(
+				msg,
+				constants.Login_failed,
+				err,
+			),
+		)
+	} else {
+		msg, e_msg := translate.TranslateWithError(c, "login_success")
+		if e_msg != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(
+				response.NewResponseError(
+					e_msg.Err.Error(),
+					constants.Translate_Failed,
+					e_msg.Err,
+				),
+			)
+		}
+		return c.Status(fiber.StatusOK).JSON(
+			response.NewResponse(
+				msg, constants.Login_success, rs,
+			),
+		)
 	}
 } 
