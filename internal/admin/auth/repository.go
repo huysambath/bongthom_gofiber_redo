@@ -7,13 +7,14 @@ import (
 	"fmt"
 	"time"
 
+	responses "admin-api/pkg/responses"
 	"github.com/jmoiron/sqlx"
 	"github.com/redis/go-redis/v9"
 )
 
 type AuthRepo interface {
-	Login(username string, password string) (*Auth, error)
-	SaveSession(userID int, loginSession string) error
+	Login(username string, password string) (*Auth, *responses.ErrorResponse)
+	UpdateLoginSession(userID int, loginSession string) error
 	CheckSession(loginSession string, userID float64) (bool, error)
 }
 
@@ -29,22 +30,23 @@ func NewAuthRepoImpl(db *sqlx.DB, rdb *redis.Client) *AuthRepoImpl {
 	}
 }
 
-func (r *AuthRepoImpl) Login(username string, password string) (*Auth, error) {
+func (r *AuthRepoImpl) Login(username string, password string) (*Auth, *responses.ErrorResponse) {
+	errResp := responses.ErrorResponse{}
 	var user Auth
 	query := `SELECT id, user_name, password, role_id FROM tbl_users WHERE user_name = $1 AND password = $2 AND deleted_at IS NULL LIMIT 1`
 
 	err := r.db.Get(&user, query, username, password)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, errResp.NewErrorResponse("invalid_credentials", fmt.Errorf("invalid username or password"))
 		}
-		return nil, err
+		return nil, errResp.NewErrorResponse("login_error", err)
 	}
 
 	return &user, nil
 }
 
-func (r *AuthRepoImpl) SaveSession(userID int, loginSession string) error {
+func (r *AuthRepoImpl) UpdateLoginSession(userID int, loginSession string) error {
 	// 1. Update database
 	query := `UPDATE tbl_users SET login_session = $1 WHERE id = $2`
 	_, err := r.db.Exec(query, loginSession, userID)

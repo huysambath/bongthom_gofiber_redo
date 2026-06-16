@@ -2,6 +2,7 @@ package handler
 
 import (
 	"admin-api/internal/admin/auth"
+	"admin-api/internal/admin/user"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/jmoiron/sqlx"
@@ -22,12 +23,15 @@ func NewServiceHandlers(a *fiber.App, db *sqlx.DB, rdb *redis.Client) *ServiceHa
 
 type AdminService struct {
 	Auth *auth.AuthRoute
+	Users *user.UserRoute
 }
 
 func NewAdminService(a *fiber.App, db *sqlx.DB, rdb *redis.Client) *AdminService{
 	authRoute := auth.NewAuthRoute(a,db,rdb)
+	userRoute := user.NewUserRoute(a,db)
 	return &AdminService{
 		Auth: authRoute,
+		Users: userRoute,
 	}
 }
 

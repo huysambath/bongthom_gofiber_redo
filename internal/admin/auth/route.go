@@ -11,7 +11,8 @@ type AuthRoute struct {
 }
 
 func NewAuthRoute(app *fiber.App, db *sqlx.DB, rdb *redis.Client) *AuthRoute{
-	s := NewAuthServiceImpl(db, rdb)
+	repo := NewAuthRepoImpl(db, rdb)
+	s := NewAuthServiceImpl(repo)
 	h := NewAuthHandler(s)
 	app.Post("/api/v1/admin/auth/login",h.Login)
 	return &AuthRoute{

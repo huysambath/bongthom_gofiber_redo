@@ -6,8 +6,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
-	"github.com/redis/go-redis/v9"
 )
 
 type AuthService interface {
@@ -19,8 +17,7 @@ type AuthServiceImpl struct {
 	Repo AuthRepo
 }
 
-func NewAuthServiceImpl(db *sqlx.DB, rdb *redis.Client) *AuthServiceImpl{
-	r := NewAuthRepoImpl(db, rdb)
+func NewAuthServiceImpl(r AuthRepo) *AuthServiceImpl{
 	return &AuthServiceImpl{
 		Repo: r,
 	}
@@ -29,15 +26,15 @@ func NewAuthServiceImpl(db *sqlx.DB, rdb *redis.Client) *AuthServiceImpl{
 func (s *AuthServiceImpl) Login(username string, password string) (*AuthLoginResponse, *error_responses.ErrorResponse) {
 	msg := error_responses.ErrorResponse{}
 
-	// If it wrong username and password it return error 
-	user, errRes := s.Repo.Login(username, password)
-	if errRes != nil {
-		return nil, errRes
+	// Validate credentials and fetch user
+	user, errResp := s.Repo.Login(username, password)
+	if errResp != nil {
+		return nil, errResp
 	}
 
+	// Generate a new login session
 	loginSession := uuid.New().String()
 
-	// Call UpdateLoginSession
 	if err := s.Repo.UpdateLoginSession(user.ID, loginSession); err != nil {
 		return nil, msg.NewErrorResponse("session_error", fmt.Errorf("failed to update login session"))
 	}
@@ -45,12 +42,12 @@ func (s *AuthServiceImpl) Login(username string, password string) (*AuthLoginRes
 	// Generate JWT token
 	tokenString, _, err := share.GenerateToken(float64(user.ID), user.UserName, loginSession, user.RoleId)
 	if err != nil {
-		return nil, msg.NewErrorResponse("token_error", fmt.Errorf("failed to gernerate token"))
+		return nil, msg.NewErrorResponse("token_error", fmt.Errorf("failed to generate token"))
 	}
 
+	// Build and return the response
 	var au AuthLoginResponse
 	au.Auth.Token = tokenString
-	au.Auth.TokenType = "jwt"
 	return &au, nil
 }
 
